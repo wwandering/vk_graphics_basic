@@ -1,8 +1,15 @@
 #include "simple_compute.h"
 
+#include <random>
+#include <ctime>
 #include <vk_pipeline.h>
 #include <vk_buffers.h>
 #include <vk_utils.h>
+
+float RandomNumber(float Min, float Max)
+{
+    return ((float(rand()) / float(RAND_MAX)) * (Max - Min)) + Min;
+}
 
 SimpleCompute::SimpleCompute(uint32_t a_length) : m_length(a_length)
 {
@@ -97,11 +104,11 @@ void SimpleCompute::SetupSimplePipeline()
   // Заполнение буферов
   std::vector<float> values(m_length);
   for (uint32_t i = 0; i < values.size(); ++i) {
-    values[i] = (float)i;
+    values[i] = RandomNumber(-1e6, 1e6);
   }
   m_pCopyHelper->UpdateBuffer(m_A, 0, values.data(), sizeof(float) * values.size());
   for (uint32_t i = 0; i < values.size(); ++i) {
-    values[i] = (float)i * i;
+    values[i] = 0.;
   }
   m_pCopyHelper->UpdateBuffer(m_B, 0, values.data(), sizeof(float) * values.size());
 }
@@ -217,6 +224,13 @@ void SimpleCompute::Execute()
   fenceCreateInfo.flags = 0;
   VK_CHECK_RESULT(vkCreateFence(m_device, &fenceCreateInfo, NULL, &m_fence));
 
+  // dummy warmup
+  std::vector<float> warmup(m_length);
+  for (int s = 0; s < m_length; ++s) {
+    warmup[s] = RandomNumber(-1e6, 1e6);
+  }
+  
+  std::clock_t c_start = std::clock();
   // Отправляем буфер команд на выполнение
   VK_CHECK_RESULT(vkQueueSubmit(m_computeQueue, 1, &submitInfo, m_fence));
 
@@ -225,7 +239,30 @@ void SimpleCompute::Execute()
 
   std::vector<float> values(m_length);
   m_pCopyHelper->ReadBuffer(m_sum, 0, values.data(), sizeof(float) * values.size());
-  for (auto v: values) {
-    std::cout << v << ' ';
+  float sum = 0.;
+  for (auto val : values) {
+    sum += val;
   }
+  std::clock_t c_end = std::clock();
+  double cpu_time_shader = 1000. * (c_end - c_start) / CLOCKS_PER_SEC;
+  std::cout << "SHADER TIME ELAPSED (MS): " << cpu_time_shader << "\n\n";
+
+  std::vector<float> values2_A(m_length);
+  std::vector<float> values2_B(m_length, 0.);
+  for (int s = 0; s < m_length; ++s) {
+    values2_A[s] = RandomNumber(-1e6, 1e6);
+  }
+  c_start = std::clock();
+  sum = 0.;
+  for (int idx = 0; idx < m_length; ++idx) {
+    for (int s = -3; s <= 3; ++s) {
+      if (0 <= idx + s && idx + s < m_length) {
+          values2_B[idx] += values2_A[idx+s] / 7.;
+      }
+    }
+    sum += values2_A[idx] - values2_B[idx];
+  }
+  c_end = std::clock();
+  double cpu_time = 1000. * (c_end - c_start) / CLOCKS_PER_SEC;
+  std::cout << "C++ TIME ELAPSED (MS): " << cpu_time << "\n\n";
 }
