@@ -241,7 +241,7 @@ void SimpleCompute::Execute()
   }
   std::clock_t c_end = std::clock();
   double cpu_time_shader = 1000. * (c_end - c_start) / CLOCKS_PER_SEC;
-  std::cout << "SHADER TIME ELAPSED (MS): " << cpu_time_shader;
+  std::cout << "SHADER TIME ELAPSED (MS): " << cpu_time_shader << '\n';
   std::cout << "SHADER SUM: " << sum << "\n\n";
 
   std::vector<float> values2_A = vals;
@@ -258,6 +258,6 @@ void SimpleCompute::Execute()
   }
   c_end = std::clock();
   double cpu_time = 1000. * (c_end - c_start) / CLOCKS_PER_SEC;
-  std::cout << "C++ TIME ELAPSED (MS): " << cpu_time;
+  std::cout << "C++ TIME ELAPSED (MS): " << cpu_time << '\n';
   std::cout << "C++ SUM: " << sum << "\n\n";
 }
