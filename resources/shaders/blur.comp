@@ -1,0 +1,43 @@
+#version 430
+
+const float PI = 3.14159265358979323846;
+const float var1 = 9;
+const float var2 = 9;
+const int kernel_sz = 11;
+const int direction = 5;
+layout (local_size_x = 11, local_size_y = 11) in;
+layout (rgba8, binding = 0) uniform image2D srcImage;
+layout (rgba8, binding = 1) uniform image2D dstImage;
+shared float kernel[kernel_sz];
+shared vec4 sharedData[kernel_sz][kernel_sz];
+
+void main()
+{
+    ivec2 imageIdx = ivec2(gl_WorkGroupID.xy);
+    ivec2 threadIdx = ivec2(gl_LocalInvocationID.xy);
+    kernel[threadIdx.x] = exp((-(threadIdx.x - direction) * (threadIdx.x - direction)) / (2 * var1)) / sqrt(2 * PI * var2);
+    sharedData[threadIdx.x][threadIdx.y] = imageLoad(srcImage, imageIdx + threadIdx - direction);
+    barrier();
+
+    vec4 pVal = {0., 0., 0., 0.};
+    if (threadIdx.x == 0) {
+        for (int s = 0; s < kernel_sz; ++s) {
+            pVal += sharedData[s][threadIdx.y] * kernel[s];
+        }
+        sharedData[threadIdx.x][threadIdx.y] = pVal;
+    }
+    barrier();
+
+    if (threadIdx.y == 0) {
+        pVal = vec4(0., 0., 0., 0.);
+        for (int s = 0; s < kernel_sz; ++s) {
+            pVal += sharedData[threadIdx.x][s] * kernel[s];
+        }
+        sharedData[threadIdx.x][threadIdx.y] = pVal;
+    }
+    barrier();
+
+    if (threadIdx.x == 0 && threadIdx.y == 0) {
+        imageStore(dstImage, imageIdx, sharedData[threadIdx.x][threadIdx.y]);
+    }
+}
