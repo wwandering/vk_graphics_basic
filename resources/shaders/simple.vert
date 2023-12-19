@@ -24,15 +24,27 @@ layout (location = 0 ) out VS_OUT
 
 } vOut;
 
+layout(binding = 1, set = 0) buffer matrixBuffer 
+{
+    mat4 matrix[];
+};
+
+
+layout(binding = 2, set = 0) buffer visibleBuffer
+{
+    uint visibleOutput[];
+};
+
 out gl_PerVertex { vec4 gl_Position; };
 void main(void)
 {
     const vec4 wNorm = vec4(DecodeNormal(floatBitsToInt(vPosNorm.w)),         0.0f);
     const vec4 wTang = vec4(DecodeNormal(floatBitsToInt(vTexCoordAndTang.z)), 0.0f);
 
-    vOut.wPos     = (params.mModel * vec4(vPosNorm.xyz, 1.0f)).xyz;
-    vOut.wNorm    = normalize(mat3(transpose(inverse(params.mModel))) * wNorm.xyz);
-    vOut.wTangent = normalize(mat3(transpose(inverse(params.mModel))) * wTang.xyz);
+    mat4 model = matrix[visibleOutput[gl_InstanceIndex]] * params.mModel;
+    vOut.wPos     = (model * vec4(vPosNorm.xyz, 1.0f)).xyz;
+    vOut.wNorm    = normalize(mat3(transpose(inverse(model))) * wNorm.xyz);
+    vOut.wTangent = normalize(mat3(transpose(inverse(model))) * wTang.xyz);
     vOut.texCoord = vTexCoordAndTang.xy;
 
     gl_Position   = params.mProjView * vec4(vOut.wPos, 1.0);

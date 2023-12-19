@@ -20,6 +20,7 @@ class SimpleRender : public IRender
 public:
   const std::string VERTEX_SHADER_PATH = "../resources/shaders/simple.vert";
   const std::string FRAGMENT_SHADER_PATH = "../resources/shaders/simple.frag";
+  const std::string FRUSTUM_CULLING_SHADER_PATH = "../resources/shaders/frustum_culling.comp";
 
   const std::string TRAJECTORY_SAVE_PATH = "trajectory.txt";
 
@@ -79,6 +80,14 @@ protected:
 
   struct
   {
+    mat4 projView;
+    vec4 bbox1;
+    vec4 bbox2;
+    uint instanceNum;
+  } pushConstFC;
+
+  struct
+  {
     uint32_t    currentFrame      = 0u;
     VkQueue     queue             = VK_NULL_HANDLE;
     VkSemaphore imageAvailable    = VK_NULL_HANDLE;
@@ -100,11 +109,29 @@ protected:
   void* m_uboMappedMem = nullptr;
 
   pipeline_data_t m_basicForwardPipeline {};
+  pipeline_data_t m_FCPipeline{};
+
+  VkDescriptorSet m_dFCSet = VK_NULL_HANDLE;
+  VkDescriptorSetLayout m_dFCSetLayout = VK_NULL_HANDLE;
+
+  VkBuffer m_matrixInstance = VK_NULL_HANDLE;
+  VkDeviceMemory m_matrixInstanceAlloc = VK_NULL_HANDLE;
+  void *m_matrixInstanceMappedMem = nullptr;
+
+  VkDrawIndexedIndirectCommand m_drawCmd;
+  VkBuffer m_drawCmdBuff = VK_NULL_HANDLE;
+  VkDeviceMemory m_drawCmdBuffAlloc = VK_NULL_HANDLE;
+  void *m_drawCmdBuffMappedMem = nullptr;
+
+  VkBuffer m_visibleInstancesIdxs = VK_NULL_HANDLE;
+  VkDeviceMemory m_visibleInstancesAlloc = VK_NULL_HANDLE;
+  void *m_visibleInstancesMappedMem = nullptr;
 
   VkDescriptorSet m_dSet = VK_NULL_HANDLE;
   VkDescriptorSetLayout m_dSetLayout = VK_NULL_HANDLE;
   VkRenderPass m_screenRenderPass = VK_NULL_HANDLE; // main renderpass
 
+  std::shared_ptr<vk_utils::DescriptorMaker> m_pFCBindings = nullptr;
   std::shared_ptr<vk_utils::DescriptorMaker> m_pBindings = nullptr;
 
   // *** presentation
@@ -157,6 +184,8 @@ protected:
   void UpdateUniformBuffer(float a_time);
 
   void Cleanup();
+  void DestroyBuffer(VkBuffer& el);
+  void FreeMemory(VkDeviceMemory& el);
 
   void SetupDeviceFeatures();
   void SetupDeviceExtensions();
