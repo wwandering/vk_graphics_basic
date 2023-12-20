@@ -1,0 +1,48 @@
+#version 430
+
+layout( local_size_x = 16 ) in;
+
+layout(push_constant) uniform params {
+    mat4 projView;
+    vec4 bbox1;
+    vec4 bbox2;
+    uint instancesNum;
+};
+
+layout(std430, binding = 0) readonly buffer matrixBuffer {
+    mat4 matrix[];
+};
+
+layout(std430, binding = 1) buffer visibleBuffer {
+    uint visibleOutput[];
+};
+
+layout(std430, binding = 2) buffer visibleCount {
+    uint count;
+};
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+
+	if (idx < instancesNum) {
+        vec4 box[8] = {bbox1,
+            {bbox1[0], bbox1[1], bbox2[2], 1.f}, 
+            {bbox1[0], bbox2[1], bbox1[2], 1.f}, 
+            {bbox1[0], bbox2[1], bbox2[2], 1.f},
+            {bbox2[0], bbox1[1], bbox1[2], 1.f}, 
+            {bbox2[0], bbox1[1], bbox2[2], 1.f}, 
+            {bbox2[0], bbox2[1], bbox1[2], 1.f}, 
+            bbox2
+        };
+
+        for (int pos = 0; pos < 8; ++pos) {
+            vec4 bound = projView * matrix[idx] * box[pos];
+            bound = bound / bound.w;
+            if ((abs(bound[0]) <= 1.) && (abs(bound[1]) <= 1.) && (bound[2] <= 1.) && (bound[2] >= 0.)) {
+                uint num = atomicAdd(count, 1);
+                visibleOutput[num] = idx;
+                break;
+            }
+        }
+	}
+}

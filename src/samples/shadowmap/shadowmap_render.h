@@ -74,6 +74,15 @@ private:
 
   struct
   {
+    mat4 projView;
+    vec4 bbox1;
+    vec4 bbox2;
+    uint instanceNum;
+  } pushConstFC;
+
+
+  struct
+  {
     uint32_t    currentFrame      = 0u;
     VkQueue     queue             = VK_NULL_HANDLE;
     VkSemaphore imageAvailable    = VK_NULL_HANDLE;
@@ -96,12 +105,31 @@ private:
   VkBuffer m_ubo = VK_NULL_HANDLE;
   VkDeviceMemory m_uboAlloc = VK_NULL_HANDLE;
   void* m_uboMappedMem = nullptr;
+  VkBuffer m_matrixInstance = VK_NULL_HANDLE;
+  VkDeviceMemory m_matrixInstanceAlloc = VK_NULL_HANDLE;
+  void* m_matrixInstanceMappedMem = nullptr;
 
+  VkBuffer m_visibleInstancesIdxs = VK_NULL_HANDLE;
+  VkDeviceMemory m_visibleInstancesAlloc = VK_NULL_HANDLE;
+  void *m_visibleInstancesMappedMem = nullptr;
+
+  VkBuffer m_visibleCount = VK_NULL_HANDLE;
+  VkDeviceMemory m_visibleCountAlloc = VK_NULL_HANDLE;
+  void* m_visibleCountMappedMem = nullptr;
+
+  VkBuffer m_indirectBuffer = VK_NULL_HANDLE;
+  VkDeviceMemory m_indirectBufferAlloc = VK_NULL_HANDLE;
+  void* m_indirectBufferMappedMem = nullptr;
+
+  pipeline_data_t m_FCPipeline {};
+  pipeline_data_t m_instancePipeline {};
   pipeline_data_t m_basicForwardPipeline {};
   pipeline_data_t m_shadowPipeline {};
 
   VkDescriptorSet m_dSet = VK_NULL_HANDLE;
   VkDescriptorSetLayout m_dSetLayout = VK_NULL_HANDLE;
+  VkDescriptorSet m_dInstanceSet = VK_NULL_HANDLE;
+  VkDescriptorSetLayout m_dInstanceSetLayout = VK_NULL_HANDLE;
   VkRenderPass m_screenRenderPass = VK_NULL_HANDLE; // main renderpass
 
   std::shared_ptr<vk_utils::DescriptorMaker> m_pBindings = nullptr;
@@ -134,8 +162,11 @@ private:
   uint32_t                                       m_shadowMapId = 0;
   
   VkDeviceMemory        m_memShadowMap = VK_NULL_HANDLE;
+  VkDescriptorSet m_FCDS;
+  VkDescriptorSetLayout m_FCDSLayout = nullptr;
   VkDescriptorSet       m_quadDS; 
   VkDescriptorSetLayout m_quadDSLayout = nullptr;
+
 
   struct InputControlMouseEtc
   {
@@ -183,6 +214,8 @@ private:
   void UpdateUniformBuffer(float a_time);
 
   void Cleanup();
+  void DestroyBuffer(VkBuffer& el);
+  void FreeMemory(VkDeviceMemory& el);
 
   void SetupDeviceFeatures();
   void SetupDeviceExtensions();

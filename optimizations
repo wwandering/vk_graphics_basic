@@ -1,0 +1,5 @@
+start : 10 fps
+instancing & reducing resolution: 10-11 fps
+culling: ??? - vulkan currently says device out of memory :(
+
+via renderdoc
